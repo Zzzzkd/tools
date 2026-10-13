@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>张悦搞的批量图片水印工具</title>
+<style>
+:root{--accent:#0071e3;--g1:#22c55e;--g2:#3b82f6;--g3:#a855f7;--grad:linear-gradient(120deg,var(--g1),var(--g2),var(--g3));--bg:#f5f5f7;--card:rgba(255,255,255,.66);--solid:#fff;--fill:rgba(118,118,128,.12);--line:rgba(0,0,0,.08);--txt:#1d1d1f;--sub:#6e6e73;--shadow:0 4px 16px rgba(0,0,0,.04);--r:28px;--ease:.3s cubic-bezier(.2,.8,.2,1)}
+@media(prefers-color-scheme:dark){:root{--accent:#0a84ff;--bg:#05060a;--card:rgba(28,28,32,.6);--solid:#1c1c1e;--fill:rgba(118,118,128,.24);--line:rgba(255,255,255,.1);--txt:#f5f5f7;--sub:#98989d;--shadow:0 4px 20px rgba(0,0,0,.3)}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:-20%;z-index:-1;background:radial-gradient(40% 35% at 15% 10%,color-mix(in srgb,var(--g1) 22%,transparent),transparent),radial-gradient(40% 35% at 85% 15%,color-mix(in srgb,var(--g3) 22%,transparent),transparent),radial-gradient(45% 40% at 50% 90%,color-mix(in srgb,var(--g2) 18%,transparent),transparent);filter:blur(40px)}
+.glass{background:var(--card);backdrop-filter:saturate(180%) blur(24px);-webkit-backdrop-filter:saturate(180%) blur(24px);border:1px solid var(--line);box-shadow:var(--shadow)}
+header{position:sticky;top:12px;z-index:9;margin:12px auto 0;max-width:1100px;width:calc(100% - 32px);padding:10px 20px;border-radius:999px;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:16px;font-weight:600;margin:0}
+header h1::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--grad);margin-right:8px;box-shadow:0 0 12px var(--g2)}
+header span{color:var(--sub);font-size:12px}
+.hero{max-width:1200px;margin:auto;padding:72px 32px 40px;display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:center}
+.hero h2{font-size:clamp(34px,5vw,56px);line-height:1.08;letter-spacing:-.035em;margin:16px 0}
+.hero h2 em{font-style:normal;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--sub);font-size:17px;max-width:460px;margin:0 0 28px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:500}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--g1);box-shadow:0 0 8px var(--g1)}
+.cta{display:inline-block;margin-top:28px;padding:14px 28px;border-radius:999px;background:var(--txt);color:var(--bg);text-decoration:none;font-weight:600;transition:var(--ease);box-shadow:0 4px 14px color-mix(in srgb,var(--g2) 18%,transparent)}
+.cta:hover{transform:translateY(-2px)}
+.stage{position:relative;height:380px;perspective:1200px}
+.stack{position:absolute;inset:0;transform-style:preserve-3d;transform:rotateX(18deg) rotateY(-24deg);animation:float 6s ease-in-out infinite}
+.photo{position:absolute;left:50%;top:50%;width:240px;height:170px;margin:-85px 0 0 -120px;border-radius:22px;border:1px solid var(--line);box-shadow:0 16px 32px rgba(0,0,0,.12)}
+.photo:nth-child(1){background:linear-gradient(135deg,#a855f7,#3b82f6);transform:translateZ(-80px) translate(40px,-40px)}
+.photo:nth-child(2){background:linear-gradient(135deg,#3b82f6,#22c55e);transform:translateZ(-40px) translate(20px,-20px)}
+.photo:nth-child(3){background:linear-gradient(160deg,#0ea5e9,#6366f1 60%,#1e1b4b);overflow:hidden}
+.photo:nth-child(3)::before{content:"";position:absolute;left:-10%;right:-10%;bottom:-30%;height:70%;background:#0f172a;border-radius:50% 50% 0 0}
+.photo:nth-child(3)::after{content:"© 版权所有";position:absolute;right:14px;bottom:12px;color:#fff;font-weight:700;font-size:13px;opacity:.85;text-shadow:0 1px 3px #0008}
+.float{position:absolute;padding:10px 14px;border-radius:16px;font-size:12px;font-weight:600;animation:float 6s ease-in-out infinite}
+.float:nth-of-type(2){top:8%;right:4%;animation-delay:-2s}
+.float:nth-of-type(3){bottom:10%;left:2%;animation-delay:-4s}
+.float b{display:block;font-size:20px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+@keyframes float{50%{translate:0 -12px}}
+@media(prefers-reduced-motion:reduce){.stack,.float{animation:none}}
+.features{max-width:1200px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.features div{padding:20px;border-radius:22px}
+.features b{display:block;margin-bottom:4px}
+.features span{color:var(--sub);font-size:13px}
+main{display:grid;grid-template-columns:340px 1fr;gap:24px;padding:48px 32px 64px;max-width:1200px;margin:auto;scroll-margin-top:60px}
+@media(max-width:900px){.hero,main{grid-template-columns:1fr}.features{grid-template-columns:1fr 1fr}.stage{height:300px}}
+.card{border-radius:var(--r);padding:22px}
+.card h2{font-size:15px;font-weight:600;margin:0 0 14px}
+.card+.card{margin-top:20px}
+label.row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0}
+label.row input[type=range]{flex:1}
+label.row output{width:40px;text-align:right;color:var(--sub);font-variant-numeric:tabular-nums}
+input[type=text],select{width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--solid);color:var(--txt);font:inherit;transition:var(--ease)}
+input[type=text]:focus,select:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent)}
+input[type=file]{font:inherit;color:var(--sub)}
+input[type=color]{width:44px;height:28px;border:0;border-radius:8px;padding:0;background:none;cursor:pointer}
+input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:var(--fill)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+input[type=checkbox]{-webkit-appearance:none;appearance:none;width:44px;height:26px;border-radius:13px;background:var(--fill);position:relative;cursor:pointer;transition:var(--ease)}
+input[type=checkbox]::after{content:"";position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12);transition:var(--ease)}
+input[type=checkbox]:checked{background:var(--accent)}
+input[type=checkbox]:checked::after{left:20px}
+.tabs,.pos{display:grid;background:var(--fill);border-radius:12px;padding:2px;gap:2px}
+.tabs{grid-template-columns:1fr 1fr;margin-bottom:14px}
+.pos{grid-template-columns:repeat(3,1fr)}
+.tabs button,.pos button{border:0;background:none;color:var(--txt);padding:7px;border-radius:10px;font:inherit;font-size:13px;cursor:pointer;transition:var(--ease)}
+.tabs button.on,.pos button.on{background:var(--solid);box-shadow:0 1px 4px rgba(0,0,0,.12);font-weight:600}
+.btn{width:100%;padding:13px;border:0;border-radius:14px;background:var(--grad);color:#fff;font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:var(--ease);box-shadow:0 8px 24px color-mix(in srgb,var(--g2) 35%,transparent)}
+.btn:hover{filter:brightness(1.08)}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn.ghost{background:var(--fill);color:var(--txt);margin-top:10px;box-shadow:none}
+#drop{border:2px dashed var(--line);border-radius:22px;padding:28px;text-align:center;color:var(--sub);cursor:pointer;transition:var(--ease)}
+#drop:hover,#drop.over{border-color:var(--g2);color:var(--g2);background:color-mix(in srgb,var(--g2) 6%,transparent)}
+#preview{display:flex;align-items:center;justify-content:center;min-height:380px;background:var(--fill);border-radius:20px;overflow:hidden}
+#preview canvas{max-width:100%;max-height:62vh;border-radius:8px;box-shadow:var(--shadow)}
+#thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;margin-top:16px}
+.th{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;cursor:pointer;outline:3px solid transparent;outline-offset:-3px;transition:var(--ease)}
+.th:hover{transform:scale(1.03)}
+.th.on{outline-color:var(--accent)}
+.th img{width:100%;height:100%;object-fit:cover}
+.th i{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-style:normal;text-align:center;line-height:20px;font-size:12px}
+progress{width:100%;height:4px;margin-top:12px;-webkit-appearance:none;appearance:none;border:0;border-radius:2px;background:var(--fill)}
+progress::-webkit-progress-bar{background:var(--fill);border-radius:2px}
+progress::-webkit-progress-value{background:var(--grad);border-radius:2px}
+.hide{display:none!important}
+.hint{color:var(--sub);font-size:12px;font-weight:400}
+/* Liquid Glass 控件 */
+:root{--lg-bg:rgba(255,255,255,.28);--lg-rim:rgba(255,255,255,.9);--lg-edge:rgba(0,0,0,.04);--spring:.5s cubic-bezier(.34,1.56,.64,1)}
+@media(prefers-color-scheme:dark){:root{--lg-bg:rgba(255,255,255,.08);--lg-rim:rgba(255,255,255,.35);--lg-edge:rgba(0,0,0,.4)}}
+.lg,.cta,.btn,.chip,header,.tabs,.pos,.th i,input[type=file]::file-selector-button,input[type=checkbox]::after,input[type=range]::-webkit-slider-thumb{
+ background:linear-gradient(180deg,rgba(255,255,255,.35),transparent 55%),var(--lg-bg);
+ backdrop-filter:blur(14px) saturate(200%);-webkit-backdrop-filter:blur(14px) saturate(200%);
+ border:0;box-shadow:inset 0 1px 1px var(--lg-rim),inset 0 -1px 1px var(--lg-edge),inset 0 0 0 1px rgba(255,255,255,.18),0 1px 4px rgba(0,0,0,.05)}
+.cta,.btn,.chip,input[type=file]::file-selector-button{border-radius:999px;transition:transform var(--spring),box-shadow var(--ease),background-position var(--ease);background-size:100% 200%}
+.cta:hover,.btn:not(:disabled):hover,input[type=file]::file-selector-button:hover{transform:scale(1.04);background-position:0 -12px}
+.cta:active,.btn:not(:disabled):active{transform:scale(.95);transition-duration:.12s}
+.cta{color:var(--txt)}
+.btn{color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.45),transparent 55%),var(--grad);box-shadow:inset 0 1px 1px var(--lg-rim),inset 0 -1px 2px rgba(0,0,0,.08),0 4px 14px color-mix(in srgb,var(--g2) 22%,transparent)}
+.btn.ghost{color:var(--txt);background:linear-gradient(180deg,rgba(255,255,255,.35),transparent 55%),var(--lg-bg);box-shadow:inset 0 1px 1px var(--lg-rim),inset 0 -1px 1px var(--lg-edge),0 1px 4px rgba(0,0,0,.05)}
+input[type=file]::file-selector-button{padding:6px 16px;line-height:1.4;margin-right:10px;color:var(--txt);font:inherit;cursor:pointer}
+.tabs,.pos{position:relative;border-radius:999px;padding:4px}
+.pos{border-radius:22px}
+.tabs::before,.pos::before{content:"";position:absolute;left:var(--x,4px);top:var(--y,4px);width:var(--w,0);height:var(--h,0);border-radius:999px;transition:all var(--spring);
+ background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,.15));box-shadow:inset 0 1px 1px #fff,0 1px 3px rgba(0,0,0,.06)}
+@media(prefers-color-scheme:dark){.tabs::before,.pos::before{background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.06));box-shadow:inset 0 1px 1px rgba(255,255,255,.5),0 1px 3px rgba(0,0,0,.25)}}
+.tabs button,.pos button{position:relative;border-radius:999px;line-height:1.4;padding:8px}
+.tabs button.on,.pos button.on{background:none;box-shadow:none}
+.tabs button:active,.pos button:active{transform:scale(.94)}
+input[type=checkbox]{width:52px;height:30px;border-radius:999px;box-shadow:inset 0 1px 3px rgba(0,0,0,.15)}
+input[type=checkbox]::after{top:3px;left:3px;width:32px;height:24px;border-radius:999px;background:linear-gradient(180deg,#fff,rgba(255,255,255,.75));transition:all var(--spring)}
+input[type=checkbox]:checked::after{left:17px}
+input[type=checkbox]:active::after{width:38px}
+input[type=checkbox]:checked:active::after{left:11px}
+input[type=range]::-webkit-slider-thumb{width:30px;height:22px;border-radius:999px;background:linear-gradient(180deg,#fff,rgba(255,255,255,.7));transition:transform var(--spring)}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(1.25)}
+input[type=range]::-moz-range-thumb{width:30px;border-radius:999px}
+.th i{width:22px;height:22px;line-height:22px;color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.35),transparent 55%),rgba(0,0,0,.35);transition:transform var(--spring)}
+.th i:hover{transform:scale(1.2)}
+/* 自定义玻璃下拉框 */
+.dd{position:relative;width:60%}
+.dd select{display:none}
+.dd>button{width:100%;display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border:0;border-radius:999px;color:var(--txt);font:inherit;line-height:1.4;cursor:pointer;background:linear-gradient(180deg,rgba(255,255,255,.35),transparent 55%),var(--lg-bg);box-shadow:inset 0 1px 1px var(--lg-rim),inset 0 0 0 1px var(--line),0 1px 4px rgba(0,0,0,.05);transition:var(--ease)}
+.dd>button::after{content:"";width:7px;height:7px;border:solid var(--sub);border-width:0 1.5px 1.5px 0;transform:translateY(-2px) rotate(45deg);transition:var(--ease)}
+.dd>button:focus-visible{outline:0;box-shadow:inset 0 1px 1px var(--lg-rim),0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
+.dd.open>button::after{transform:translateY(2px) rotate(-135deg)}
+.dd ul{position:absolute;z-index:20;left:0;right:0;top:calc(100% + 6px);margin:0;padding:5px;list-style:none;border-radius:16px;background:var(--solid);backdrop-filter:blur(24px) saturate(200%);-webkit-backdrop-filter:blur(24px) saturate(200%);box-shadow:inset 0 1px 1px var(--lg-rim),inset 0 0 0 1px var(--line),0 8px 24px rgba(0,0,0,.08);opacity:0;transform:scale(.96) translateY(-4px);transform-origin:top;pointer-events:none;transition:opacity .18s,transform var(--spring)}
+.dd.open ul{opacity:1;transform:none;pointer-events:auto}
+.dd li{display:flex;justify-content:space-between;padding:7px 12px;border-radius:11px;cursor:pointer}
+.dd li.act{background:var(--fill)}
+.dd li[aria-selected=true]{color:var(--accent);font-weight:600}
+.dd li[aria-selected=true]::after{content:"✓"}
+.tabs::after,.pos::after{content:"";position:absolute;left:var(--x,4px);top:var(--y,4px);width:var(--w,0);height:var(--h,0);border-radius:999px;padding:1px;pointer-events:none;transition:all var(--spring);
+ background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 35%,transparent) 50%,color-mix(in srgb,var(--accent) 70%,transparent));
+ -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.tabs::before,.pos::before{box-shadow:inset 0 1px 1px var(--lg-rim),0 0 10px color-mix(in srgb,var(--accent) 18%,transparent)}
+.tabs button.on,.pos button.on{color:color-mix(in srgb,var(--accent) 65%,var(--txt))}
+.th b{position:absolute;left:4px;bottom:4px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600;color:#fff;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 60%,var(--g3)));box-shadow:inset 0 1px 1px rgba(255,255,255,.5)}
+#preview canvas{cursor:move;touch-action:none}
+/* 手机端 */
+@media(pointer:coarse){
+ input[type=range]{height:6px}
+ input[type=range]::-webkit-slider-thumb{width:34px;height:28px}
+ label.row{min-height:44px;margin:6px 0}
+ .tabs button,.pos button,.dd>button,.dd li,input[type=file]::file-selector-button{min-height:44px}
+ .th i{width:28px;height:28px;line-height:28px}
+}
+@media(max-width:640px){
+ body{padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+ input[type=text],.dd>button{font-size:16px}
+ .glass,.dd ul{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+ body::before{filter:none}
+ header{top:max(8px,env(safe-area-inset-top));padding:8px 16px}
+ header span{display:none}
+ .hero{padding:32px 16px 16px;gap:8px}
+ .hero h2{font-size:32px}
+ .hero p{font-size:15px;margin-bottom:16px}
+ .cta{margin-top:16px}
+ .stage{height:200px;transform:scale(.7);margin:-20px 0}
+ .features{padding:0 16px;gap:10px}
+ .features div{padding:14px;border-radius:18px}
+ main{padding:20px 12px 40px;gap:16px}
+ main>section{order:-1}
+ .card{padding:16px;border-radius:22px}
+ #drop{padding:18px}
+ #preview{min-height:220px}
+ #preview canvas{max-height:50vh}
+ #thumbs{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}
+ .th{flex:0 0 76px;scroll-snap-align:start}
+}
+#wxImgs img{width:100%;margin-top:10px;border-radius:12px}
+.notice{margin-top:10px;padding:10px 14px;border-radius:14px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);font-size:13px}
+</style>
+</head>
+<body>
+<header class="glass"><h1>张悦搞的批量图片水印工具</h1><span>全部在本地浏览器处理，图片不会上传</span></header>
+<section class="hero">
+ <div>
+  <div class="chips"><span class="chip glass">100% 本地处理</span><span class="chip glass">离线可用</span><span class="chip glass">不上传任何图片</span></div>
+  <h2>给每一张图片<br><em>一键加上水印</em></h2>
+  <p>文字或 LOGO，平铺或角落，实时预览，批量导出 ZIP。所见即所得，原图尺寸无损输出。</p>
+  <a class="cta" href="#tool">开始使用 →</a>
+ </div>
+ <div class="stage">
+  <div class="stack"><div class="photo"></div><div class="photo"></div><div class="photo"></div></div>
+  <div class="float glass"><b>批量</b>一次处理多张</div>
+  <div class="float glass"><b>ZIP</b>一键打包下载</div>
+ </div>
+</section>
+<section class="features">
+ <div class="glass"><b>文字 / LOGO</b><span>字号、颜色、描边、透明 PNG</span></div>
+ <div class="glass"><b>灵活定位</b><span>四角、居中、平铺与旋转</span></div>
+ <div class="glass"><b>格式可选</b><span>保持原格式或 JPG / PNG / WebP</span></div>
+ <div class="glass"><b>隐私安全</b><span>全部在浏览器内完成</span></div>
+</section>
+<main id="tool">
+<aside>
+ <section class="card glass hide" id="scopeBox">
+  <h2>设置作用于</h2>
+  <div class="tabs" id="scope"><button data-v="all">全部图片</button><button data-v="one">仅当前图片</button></div>
+  <p class="hint">在预览图上拖动可单独调整当前图片的水印位置</p>
+  <button class="btn ghost" id="reset">恢复为全局设置</button>
+ </section>
+ <section class="card glass">
+  <h2>水印类型</h2>
+  <div class="tabs" id="type"><button data-v="text">文字</button><button data-v="logo">图片 LOGO</button></div>
+  <div id="textOpts">
+   <input type="text" id="text" value="© 版权所有">
+   <label class="row">字号(图宽%)<input type="range" id="fontSize" min="1" max="20" value="5"><output></output></label>
+   <label class="row">颜色<input type="color" id="color" value="#ffffff"></label>
+   <label class="row">加粗<input type="checkbox" id="bold" checked></label>
+   <label class="row">描边<input type="checkbox" id="stroke" checked></label>
+  </div>
+  <div id="logoOpts" class="hide">
+   <input type="file" id="logoFile" accept="image/*">
+   <p class="hint">建议使用透明背景 PNG</p>
+   <label class="row">大小(图宽%)<input type="range" id="logoSize" min="2" max="60" value="15"><output></output></label>
+  </div>
+ </section>
+ <section class="card glass">
+  <h2>样式与位置</h2>
+  <label class="row">透明度%<input type="range" id="opacity" min="5" max="100" value="60"><output></output></label>
+  <label class="row">旋转°<input type="range" id="rotate" min="-90" max="90" value="0"><output></output></label>
+  <label class="row">边距%<input type="range" id="margin" min="0" max="20" value="3"><output></output></label>
+  <div class="pos" id="pos">
+   <button data-v="tl">左上</button><button data-v="tile">平铺</button><button data-v="tr">右上</button>
+   <button data-v="c">居中</button><button data-v="bl">左下</button><button data-v="br">右下</button>
+  </div>
+  <label class="row" id="gapRow">平铺间距%<input type="range" id="gap" min="5" max="60" value="20"><output></output></label>
+ </section>
+ <section class="card glass">
+  <h2>导出</h2>
+  <label class="row">格式<select id="format"><option value="">保持原格式</option><option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option></select></label>
+  <label class="row">质量%<input type="range" id="quality" min="50" max="100" value="92"><output></output></label>
+  <label class="row">文件名后缀<input type="text" id="suffix" value="_wm" style="width:60%"></label>
+  <button class="btn" id="export" disabled>导出 ZIP</button>
+  <progress id="prog" class="hide" value="0"></progress>
+  <p class="notice hide" id="wxTip">微信内无法直接下载文件，请点右上角「···」选择「在浏览器打开」后再导出；也可以长按下方图片逐张保存。</p>
+  <div id="wxImgs"></div>
+  <button class="btn ghost" id="clear">清空图片</button>
+ </section>
+</aside>
+<section class="card glass">
+ <div id="drop">点击或拖拽添加图片（支持多选）<input type="file" id="files" accept="image/*" multiple hidden></div>
+ <h2 style="margin-top:20px">预览 <span class="hint" id="info"></span></h2>
+ <div id="preview"><span class="hint">请先添加图片</span></div>
+ <div id="thumbs"></div>
+</section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const PREVIEW_MAX = 1200;
+const FIELDS = ['text', 'fontSize', 'color', 'bold', 'stroke', 'logoSize', 'opacity', 'rotate', 'margin', 'gap'];
+const state = { logo: null, items: [], cur: -1, global: { type: 'text', pos: 'br', xy: null } };
+
+// 设置：全局默认，单图可覆盖（custom 为整份设置的副本）
+const current = () => state.items[state.cur];
+const target = () => current()?.custom || state.global;
+const field = (k, v) => { const el = $(k); if (v === undefined) return el.type === 'checkbox' ? el.checked : el.value; el.type === 'checkbox' ? el.checked = v : el.value = v; };
+const save = () => FIELDS.forEach(k => target()[k] = field(k));
+FIELDS.forEach(k => state.global[k] = field(k));
+
+// 把原始设置换算成绘制参数
+const opts = s => ({
+  type: s.type, pos: s.pos, xy: s.xy, logo: state.logo, text: s.text, color: s.color, bold: s.bold, stroke: s.stroke,
+  fontSize: s.fontSize / 100, logoSize: s.logoSize / 100, opacity: s.opacity / 100,
+  rotate: s.rotate * Math.PI / 180, margin: s.margin / 100, gap: s.gap / 100,
+});
+
+// 在画布上绘制水印，尺寸全部按图片宽度比例计算，预览与导出一致
+function drawMark(ctx, w, h, o) {
+  let mw, mh, paint;
+  if (o.type === 'text') {
+    if (!o.text) return;
+    const size = Math.max(8, w * o.fontSize);
+    ctx.font = `${o.bold ? 'bold ' : ''}${size}px ${getComputedStyle(document.body).fontFamily}`;
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+    mw = ctx.measureText(o.text).width; mh = size;
+    paint = () => {
+      if (o.stroke) { ctx.lineWidth = size / 12; ctx.strokeStyle = '#0008'; ctx.strokeText(o.text, 0, 0); }
+      ctx.fillStyle = o.color; ctx.fillText(o.text, 0, 0);
+    };
+  } else {
+    if (!o.logo) return;
+    mw = w * o.logoSize; mh = mw * o.logo.height / o.logo.width;
+    paint = () => ctx.drawImage(o.logo, -mw / 2, -mh / 2, mw, mh);
+  }
+  const m = w * o.margin;
+  const at = (x, y) => { ctx.save(); ctx.translate(x, y); ctx.rotate(o.rotate); paint(); ctx.restore(); };
+  ctx.save(); ctx.globalAlpha = o.opacity;
+  if (o.pos === 'free') at(o.xy[0] * w, o.xy[1] * h);
+  else if (o.pos === 'tile') {
+    const sx = mw + w * o.gap, sy = mh + w * o.gap;
+    for (let y = sy / 2, r = 0; y < h + sy; y += sy, r++)
+      for (let x = (r % 2) * sx / 2; x < w + sx; x += sx) at(x, y);
+  } else {
+    const xs = { l: m + mw / 2, r: w - m - mw / 2, c: w / 2 };
+    const ys = { t: m + mh / 2, b: h - m - mh / 2, c: h / 2 };
+    const p = o.pos === 'c' ? 'cc' : o.pos;
+    at(xs[p[1]], ys[p[0]]);
+  }
+  ctx.restore();
+}
+
+function render(img, scale, o, c = document.createElement('canvas')) {
+  c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  drawMark(ctx, c.width, c.height, o);
+  return c;
+}
+
+// 预览：复用同一画布，缓存当前图解码结果，拖拽时只重绘
+const pv = document.createElement('canvas');
+let raf = 0, cache = {};
+function preview() {
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(async () => {
+    const it = current();
+    if (!it) { $('preview').innerHTML = '<span class="hint">请先添加图片</span>'; $('info').textContent = ''; return; }
+    if (cache.it !== it) { cache.img?.close(); cache = { it, img: await it.bitmap() }; }
+    const img = cache.img;
+    render(img, Math.min(1, PREVIEW_MAX / Math.max(img.width, img.height)), opts(target()), pv);
+    if (pv.parentNode !== $('preview')) $('preview').replaceChildren(pv);
+    $('info').textContent = `${it.file.name}　${img.width}×${img.height}　(${state.cur + 1}/${state.items.length})`;
+  });
+}
+
+// 表单与分段控件同步为当前作用对象的设置
+function load() {
+  const s = target(), it = current();
+  FIELDS.forEach(k => field(k, s[k]));
+  document.querySelectorAll('input[type=range]').forEach(r => r.nextElementSibling.value = r.value);
+  $('textOpts').classList.toggle('hide', s.type !== 'text'); $('logoOpts').classList.toggle('hide', s.type === 'text');
+  $('gapRow').classList.toggle('hide', s.pos !== 'tile');
+  $('scopeBox').classList.toggle('hide', !it); $('reset').classList.toggle('hide', !it?.custom);
+  seg($('type'), s.type); seg($('pos'), s.pos); seg($('scope'), it?.custom ? 'one' : 'all');
+}
+
+function setScope(one) {
+  const it = current();
+  if (!it) return;
+  it.custom = one ? it.custom || structuredClone(state.global) : null;
+  load(); refreshList(); preview();
+}
+
+function refreshList() {
+  $('thumbs').replaceChildren(...state.items.map((it, i) => {
+    const d = document.createElement('div');
+    d.className = 'th' + (i === state.cur ? ' on' : '');
+    d.innerHTML = `<img src="${it.url}" title="${it.file.name}"><i>×</i>${it.custom ? '<b>自定义</b>' : ''}`;
+    d.onclick = e => {
+      if (e.target.tagName === 'I') { URL.revokeObjectURL(it.url); state.items.splice(i, 1); state.cur = Math.min(state.cur, state.items.length - 1); }
+      else state.cur = i;
+      load(); refreshList(); preview();
+    };
+    return d;
+  }));
+  $('export').disabled = !state.items.length;
+}
+
+function addFiles(files) {
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    state.items.push({ file, url: URL.createObjectURL(file), bitmap: () => createImageBitmap(file), custom: null });
+  }
+  if (state.cur < 0 && state.items.length) state.cur = 0;
+  load(); refreshList(); preview();
+}
+
+// 最简 ZIP（仅存储不压缩，图片本身已压缩）
+const CRC = Array.from({ length: 256 }, (_, n) => { for (let k = 0; k < 8; k++) n = n & 1 ? 0xEDB88320 ^ (n >>> 1) : n >>> 1; return n >>> 0; });
+const crc32 = b => { let c = ~0; for (const x of b) c = CRC[(c ^ x) & 255] ^ (c >>> 8); return ~c >>> 0; };
+function zip(files) {
+  const parts = [], dir = []; let off = 0;
+  for (const { name, data } of files) {
+    const n = new TextEncoder().encode(name), crc = crc32(data);
+    const head = (sig, extra) => {
+      const v = new DataView(new ArrayBuffer(extra ? 46 : 30));
+      v.setUint32(0, sig, true); let p = 4;
+      if (extra) v.setUint16(p, 20, true), p += 2;
+      v.setUint16(p, 20, true); v.setUint16(p + 2, 0x800, true);
+      v.setUint32(p + 10, crc, true); v.setUint32(p + 14, data.length, true); v.setUint32(p + 18, data.length, true);
+      v.setUint16(p + 22, n.length, true);
+      if (extra) v.setUint32(42, off, true);
+      return new Uint8Array(v.buffer);
+    };
+    dir.push(head(0x02014b50, true), n);
+    parts.push(head(0x04034b50), n, data);
+    off += 30 + n.length + data.length;
+  }
+  const size = dir.reduce((s, d) => s + d.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, size, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...dir, end], { type: 'application/zip' });
+}
+
+// 微信等内置浏览器不支持下载文件
+const IN_APP = /MicroMessenger/i.test(navigator.userAgent);
+const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+async function exportZip() {
+  $('wxImgs').querySelectorAll('img').forEach(i => URL.revokeObjectURL(i.src)); $('wxImgs').replaceChildren();
+  const fmt = $('format').value, q = +$('quality').value / 100, out = [], used = new Set();
+  $('export').disabled = true; $('prog').classList.remove('hide'); $('prog').max = state.items.length;
+  for (const [i, it] of state.items.entries()) {
+    const img = await it.bitmap();
+    const type = fmt || (EXT[it.file.type] ? it.file.type : 'image/png');
+    const blob = await new Promise(r => render(img, 1, opts(it.custom || state.global)).toBlob(r, type, q));
+    img.close();
+    let name = it.file.name.replace(/\.[^.]+$/, '') + $('suffix').value, final = `${name}.${EXT[type]}`;
+    for (let k = 2; used.has(final); k++) final = `${name}(${k}).${EXT[type]}`;
+    used.add(final);
+    if (IN_APP) $('wxImgs').append(Object.assign(new Image(), { src: URL.createObjectURL(blob), alt: final }));
+    out.push({ name: final, data: new Uint8Array(await blob.arrayBuffer()) });
+    $('prog').value = i + 1;
+  }
+  if (IN_APP) { $('wxTip').classList.remove('hide'); $('export').disabled = false; $('prog').classList.add('hide'); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(zip(out)); a.download = '水印图片.zip'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  $('export').disabled = false; $('prog').classList.add('hide');
+}
+
+// 事件绑定
+const seg = (box, v) => { box.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.v === v)); lens(box); };
+// 分段控件的玻璃滑块跟随选中项，无选中项时隐藏
+const lens = box => {
+  const b = box.querySelector('.on') || { offsetLeft: 0, offsetTop: 0, offsetWidth: 0, offsetHeight: 0 };
+  [['--x', b.offsetLeft], ['--y', b.offsetTop], ['--w', b.offsetWidth], ['--h', b.offsetHeight]].forEach(([k, v]) => box.style.setProperty(k, v + 'px'));
+};
+const lensAll = () => document.querySelectorAll('.tabs,.pos').forEach(lens);
+addEventListener('load', lensAll); addEventListener('resize', lensAll);
+['type', 'pos'].forEach(key => $(key).querySelectorAll('button').forEach(b => b.onclick = () => { target()[key] = b.dataset.v; load(); preview(); }));
+$('scope').querySelectorAll('button').forEach(b => b.onclick = () => setScope(b.dataset.v === 'one'));
+$('reset').onclick = () => setScope(false);
+document.querySelectorAll('input[type=range]').forEach(r => r.addEventListener('input', () => r.nextElementSibling.value = r.value));
+document.querySelectorAll('aside input:not([type=file])').forEach(el => el.addEventListener('input', () => { save(); preview(); }));
+$('logoFile').onchange = async e => { const f = e.target.files[0]; state.logo = f ? await createImageBitmap(f) : null; preview(); };
+
+// 在预览上拖动水印：自动切到“仅当前图片”，位置按相对坐标保存
+$('preview').onpointerdown = e => {
+  if (e.target !== pv) return;
+  if (!current().custom) setScope(true);
+  const move = ev => {
+    const r = pv.getBoundingClientRect(), s = target();
+    s.pos = 'free'; s.xy = [(ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height].map(v => Math.min(1, Math.max(0, v)));
+    seg($('pos'), s.pos); $('gapRow').classList.add('hide'); preview();
+  };
+  move(e); pv.setPointerCapture(e.pointerId); pv.onpointermove = move;
+  pv.onpointerup = () => pv.onpointermove = null;
+};
+$('drop').onclick = () => $('files').click();
+$('files').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+['dragover', 'dragleave', 'drop'].forEach(t => $('drop').addEventListener(t, e => { e.preventDefault(); $('drop').classList.toggle('over', t === 'dragover'); if (t === 'drop') addFiles(e.dataTransfer.files); }));
+$('export').onclick = exportZip;
+$('clear').onclick = () => { state.items.forEach(it => URL.revokeObjectURL(it.url)); state.items = []; state.cur = -1; load(); refreshList(); preview(); };
+load();
+
+// 玻璃下拉框：以原生 select 为数据源，替换其弹出层
+function dropdown(sel) {
+  const box = document.createElement('div'), btn = document.createElement('button'), ul = document.createElement('ul');
+  const items = [...sel.options].map((o, i) => {
+    const li = document.createElement('li');
+    li.textContent = o.text; li.setAttribute('role', 'option');
+    li.onmousedown = e => { e.preventDefault(); choose(i); };
+    li.onmouseenter = () => mark(i);
+    return li;
+  });
+  let act = 0;
+  const mark = i => { act = (i + items.length) % items.length; items.forEach((li, k) => li.classList.toggle('act', k === act)); };
+  const sync = () => { btn.textContent = sel.options[sel.selectedIndex].text; items.forEach((li, k) => li.setAttribute('aria-selected', k === sel.selectedIndex)); };
+  const toggle = on => { box.classList.toggle('open', on); btn.setAttribute('aria-expanded', on); if (on) mark(sel.selectedIndex); };
+  const choose = i => { sel.selectedIndex = i; sel.dispatchEvent(new Event('change')); sync(); toggle(false); };
+  btn.type = 'button'; btn.setAttribute('aria-haspopup', 'listbox'); ul.setAttribute('role', 'listbox');
+  btn.onclick = () => toggle(!box.classList.contains('open'));
+  btn.onblur = () => toggle(false);
+  btn.onkeydown = e => {
+    const open = box.classList.contains('open');
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); open ? mark(act + (e.key === 'ArrowDown' ? 1 : -1)) : toggle(true); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open ? choose(act) : toggle(true); }
+    else if (e.key === 'Escape') toggle(false);
+  };
+  box.className = 'dd'; sel.replaceWith(box); ul.append(...items); box.append(sel, btn, ul); sync();
+}
+document.querySelectorAll('select').forEach(dropdown);
+</script>
+</body>
+</html>
